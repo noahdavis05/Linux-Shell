@@ -148,6 +148,64 @@ int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, char *second_co
     return 0;
 }
 
+int pipeCommand(char *args_pointers[ARG_LIMIT], char *second_command){
+    // create a pipe
+    int pcp[2];
+    if (pipe(pcp) == -1){
+        perror("Pipe failed");
+        return EXIT_FAILURE;
+    }
+    // fork for the left command
+    pid_t pid1 = fork();
+    if (pid1 == 0){
+        // in child process
+        // close stdout
+        close(pcp[0]);
+        if (dup2(pcp[1], STDOUT_FILENO) == -1){
+            perror("dup2 pipe1");
+            close(pcp[1]);
+            exit(EXIT_FAILURE);
+        }
+        close(pcp[1]);
+        if (execvp(args_pointers[0], args_pointers) == -1){
+            perror("execvp");
+            close(pcp[1]);
+            exit(EXIT_FAILURE);
+        }
+    } else if (pid1 < 0){
+        perror("Fork failed");
+        exit(EXIT_FAILURE);
+    }
+
+    
+
+    // now fork for the right hand command which will read from pipe
+    pid_t pid2 = fork();
+    if (pid2 == 0){
+        close(pcp[1]);
+        if (dup2(pcp[0], STDIN_FILENO) == -1){
+            perror("dup2 pipe 2");
+            close(pcp[0]);
+            return EXIT_FAILURE;
+        }
+        close(pcp[0]);
+        //printf("Entered fork 2");
+        // now call run command function for the second command
+        runCommand(second_command);
+        exit(EXIT_FAILURE);
+    }
+
+    close(pcp[0]);
+    close(pcp[1]);
+
+
+    int status1;
+    waitpid(pid1, &status1,0);
+    int status2;
+    waitpid(pid2, &status2, 0);
+    return 0;
+}
+
 void runCommand(char *buf){
     // make an array pointing to the start of each argument
     //printf("%s", buf);
@@ -244,7 +302,7 @@ void runCommand(char *buf){
     if (sequential_command == 1){
         sequentialCommand(args_pointers, args, second_command);
     } else if (pipe_command == 1){
-        printf("Pipe command\n");
+        pipeCommand(args_pointers, second_command);
     } else if (redirect_left == 1){
         redirectionCommand(args_pointers, args, second_command, LEFT, BUF_SIZE - pos);
     } else if (redirect_right == 1){
