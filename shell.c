@@ -3,10 +3,19 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <string.h>
+#include <fcntl.h>
+#include <sys/syscall.h>
+
 
 
 #define BUF_SIZE 300
 #define ARG_LIMIT 15
+#define LEFT 0
+#define RIGHT 1
+
+// stub
+void runCommand( char *buf);
 
 int getCommand(char *buf){
     // print out >>>
@@ -22,35 +31,58 @@ int executeCommand(char *args_pointers[ARG_LIMIT], int args){
     //}
 
     // null terminate array of pointers
-    if (args < ARG_LIMIT){
-        args_pointers[args] = NULL;
-    } else{
-        args_pointers[ARG_LIMIT] = NULL;
-    }
 
-    // make a fork
-    pid_t pid = fork();
-
-    // check fork succesful
-    if (pid < 0){
-        perror("fork");
-        return EXIT_FAILURE;
-    }
-
-    if (pid == 0){
-        // in child process
-        // replace current process with args_pointers[0]
-        execvp(args_pointers[0], args_pointers);
-
-        // if execvp fails, print an error and exit
-        perror("execvp");
-        return EXIT_FAILURE;
+    // check if the command is a cd 
+    if (strcmp(args_pointers[0], "cd") == 0){
+        if (args > 1){
+            chdir(args_pointers[1]);
+        } else {
+            perror("No directory specified");
+            return EXIT_FAILURE;
+        }
+        
     } else {
-        // in parent process
-        int status;
-        waitpid(pid, &status, 0); // wait for the child to complete
-    }
 
+        // make a fork
+        pid_t pid = fork();
+
+        // check fork succesful
+        if (pid < 0){
+            perror("fork");
+            return EXIT_FAILURE;
+        }
+
+        if (pid == 0){
+            // in child process
+            // replace current process with args_pointers[0]
+            execvp(args_pointers[0], args_pointers);
+
+            // if execvp fails, print an error and exit
+            perror("execvp");
+            return EXIT_FAILURE;
+        } else {
+            // in parent process
+            int status;
+            waitpid(pid, &status, 0); // wait for the child to complete
+        }
+    }
+    return 0;
+}
+
+int sequentialCommand(char *args_pointers[ARG_LIMIT], int args, char *second_command){
+    executeCommand(args_pointers, args);
+    runCommand(second_command);
+    return 0;
+}
+
+int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, char *second_command, int direction){
+    // ensure that second_command has no \n
+    for (int i = 0; i < sizeof(second_command) + 1; i++){
+        if (second_command[i] == '\n'){
+            second_command[i] = '\0';
+        }
+    }
+    printf("¬%s¬\n", second_command);
     return 0;
 }
 
@@ -86,9 +118,9 @@ void runCommand(char *buf){
                 sequential_command = 1;
             } else if (buf[pos] == '|'){
                 pipe_command = 1;
-            } else if (buf[pos] == '>'){
-                redirect_left = 1;
             } else if (buf[pos] == '<'){
+                redirect_left = 1;
+            } else if (buf[pos] == '>'){
                 redirect_right = 1;
             }
             // this is the end of an argument
@@ -129,16 +161,22 @@ void runCommand(char *buf){
      //   printf("'%s'\n",args_pointers[i]);
     //}
     //printf("second command = '%s'", second_command);
+    // null terminate the arguments
+    if (args < ARG_LIMIT){
+        args_pointers[args] = NULL;
+    } else{
+        args_pointers[ARG_LIMIT] = NULL;
+    }
 
     // execute commands
     if (sequential_command == 1){
-        printf("Sequential\n");
+        sequentialCommand(args_pointers, args, second_command);
     } else if (pipe_command == 1){
         printf("Pipe command\n");
     } else if (redirect_left == 1){
-        printf("Redirection left");
+        redirectionCommand(args_pointers, args, second_command, LEFT);
     } else if (redirect_right == 1){
-        printf("Redirection right\n");
+        redirectionCommand(args_pointers, args, second_command, RIGHT);
     } else {
         executeCommand(args_pointers, args);
     }
