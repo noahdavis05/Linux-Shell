@@ -1,4 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 
 #define BUF_SIZE 300
@@ -9,6 +13,44 @@ int getCommand(char *buf){
     printf(">>> ");
     // read the user input
     fgets(buf, BUF_SIZE, stdin);
+    return 0;
+}
+
+int executeCommand(char *args_pointers[ARG_LIMIT], int args){
+    //for (int i = 0; i < args; i++){
+    //    printf("%s\n", args_pointers[i]);
+    //}
+
+    // null terminate array of pointers
+    if (args < ARG_LIMIT){
+        args_pointers[args] = NULL;
+    } else{
+        args_pointers[ARG_LIMIT] = NULL;
+    }
+
+    // make a fork
+    pid_t pid = fork();
+
+    // check fork succesful
+    if (pid < 0){
+        perror("fork");
+        return EXIT_FAILURE;
+    }
+
+    if (pid == 0){
+        // in child process
+        // replace current process with args_pointers[0]
+        execvp(args_pointers[0], args_pointers);
+
+        // if execvp fails, print an error and exit
+        perror("execvp");
+        return EXIT_FAILURE;
+    } else {
+        // in parent process
+        int status;
+        waitpid(pid, &status, 0); // wait for the child to complete
+    }
+
     return 0;
 }
 
@@ -83,10 +125,23 @@ void runCommand(char *buf){
         
     }
     //printf("%d", args);
-    for (int i = 0; i < args; i++){
-        printf("'%s'\n",args_pointers[i]);
+    //for (int i = 0; i < args; i++){
+     //   printf("'%s'\n",args_pointers[i]);
+    //}
+    //printf("second command = '%s'", second_command);
+
+    // execute commands
+    if (sequential_command == 1){
+        printf("Sequential\n");
+    } else if (pipe_command == 1){
+        printf("Pipe command\n");
+    } else if (redirect_left == 1){
+        printf("Redirection left");
+    } else if (redirect_right == 1){
+        printf("Redirection right\n");
+    } else {
+        executeCommand(args_pointers, args);
     }
-    printf("second command = '%s'", second_command);
 }
 
 
