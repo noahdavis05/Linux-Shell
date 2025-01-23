@@ -75,14 +75,76 @@ int sequentialCommand(char *args_pointers[ARG_LIMIT], int args, char *second_com
     return 0;
 }
 
-int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, char *second_command, int direction){
+int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, char *second_command, int direction, int size){
     // ensure that second_command has no \n
-    for (int i = 0; i < sizeof(second_command) + 1; i++){
+    for (int i = 0; i < size; i++){
         if (second_command[i] == '\n'){
             second_command[i] = '\0';
         }
     }
-    printf("¬%s¬\n", second_command);
+    //printf("¬%s¬\n", second_command);
+    
+    // now fork a new process
+    pid_t pid = fork();
+    if (pid < 0){
+        perror("fork");
+        return EXIT_FAILURE;
+    }
+    int fd;
+    if (pid == 0){
+        // child process
+        // check if redirection is left or right
+        if (direction == RIGHT){
+            //printf("Redirect right\n");
+            // firstly need to open the file
+            int fd = syscall(SYS_open, second_command, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+            if (fd == -1){
+                perror("Error opening file");
+                return EXIT_FAILURE;
+            }
+            if (close(STDOUT_FILENO) == -1){
+                perror("error closing stdout");
+                return EXIT_FAILURE;
+            }
+            if (dup2(fd, STDOUT_FILENO) == -1){
+                perror("dup2");
+                close(fd);
+                return EXIT_FAILURE;
+            }
+            // successful so close file and execute command
+            if (syscall(SYS_close, fd) == -1){
+                perror("Error closing file");
+                return EXIT_FAILURE;
+            }
+
+        } else if (direction == LEFT){
+            // open the file
+            int fd = syscall(SYS_open, second_command, O_RDONLY);
+            if (fd == -1) {
+                perror("open for input redirection");
+                return EXIT_FAILURE;
+            }
+            if (dup2(fd, STDIN_FILENO) == -1) {
+                perror("dup2 for input redirection");
+                close(fd);
+                return EXIT_FAILURE;
+            }
+            // successful so close file and execute command
+            if (syscall(SYS_close, fd) == -1){
+                perror("Error closing file");
+                return EXIT_FAILURE;
+            }
+
+        }
+
+        execvp(args_pointers[0], args_pointers);
+        perror("exepvp failed");
+        return EXIT_FAILURE;
+    } else {
+        // parent process
+        int status;
+        waitpid(pid, &status, 0);
+    }
     return 0;
 }
 
@@ -174,9 +236,9 @@ void runCommand(char *buf){
     } else if (pipe_command == 1){
         printf("Pipe command\n");
     } else if (redirect_left == 1){
-        redirectionCommand(args_pointers, args, second_command, LEFT);
+        redirectionCommand(args_pointers, args, second_command, LEFT, BUF_SIZE - pos);
     } else if (redirect_right == 1){
-        redirectionCommand(args_pointers, args, second_command, RIGHT);
+        redirectionCommand(args_pointers, args, second_command, RIGHT, BUF_SIZE - pos);
     } else {
         executeCommand(args_pointers, args);
     }
