@@ -157,6 +157,8 @@ void runCommand(char *buf){
     int pos = 0;
     int args = 0;
     int prev_start = 0;
+    // to allow speech marks
+    int speech_open = 0;
     // variables to detect redirection, pipes, and semi-colons
     int redirect_left = 0;
     int redirect_right = 0;
@@ -174,7 +176,14 @@ void runCommand(char *buf){
             args_pointers[args] = &buf[prev_start];
             args++;          
         }
-        if (buf[pos] == ' ' || buf[pos] == ';' || buf[pos] == '|' || buf[pos] == '>' || buf[pos] == '<'){
+        if (buf[pos] == '"'){
+            if (speech_open == 0){
+                speech_open = 1;
+            } else{
+                speech_open = 0;
+            }
+        }
+        if ((buf[pos] == ' ' || buf[pos] == ';' || buf[pos] == '|' || buf[pos] == '>' || buf[pos] == '<') && speech_open == 0){
             // check what the input was
             if (buf[pos] == ';'){
                 sequential_command = 1;
@@ -224,6 +233,7 @@ void runCommand(char *buf){
     //}
     //printf("second command = '%s'", second_command);
     // null terminate the arguments
+    //printf("%d\n", args);
     if (args < ARG_LIMIT){
         args_pointers[args] = NULL;
     } else{
