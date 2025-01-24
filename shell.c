@@ -75,29 +75,23 @@ int sequentialCommand(char *args_pointers[ARG_LIMIT], int args, char *second_com
     return 0;
 }
 
-int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, char *second_command, int direction, int size){
+int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, int redirect_right_arg, int redirect_left_arg){
     // ensure that second_command has no \n
-    for (int i = 0; i < size; i++){
-        if (second_command[i] == '\n'){
-            second_command[i] = '\0';
+    if (redirect_right_arg > 0 && redirect_left_arg > 0){
+        // both redirections
+    } else if (redirect_right_arg > 0){
+        // just redirecting right
+        // get the filename
+        char *filename = args_pointers[redirect_right_arg];
+        // create a fork
+        pid_t pid = fork();
+        if (pid < 0){
+            perror("fork");
+            return EXIT_FAILURE;
         }
-    }
-    //printf("¬%s¬\n", second_command);
-    
-    // now fork a new process
-    pid_t pid = fork();
-    if (pid < 0){
-        perror("fork");
-        return EXIT_FAILURE;
-    }
-    int fd;
-    if (pid == 0){
-        // child process
-        // check if redirection is left or right
-        if (direction == RIGHT){
-            //printf("Redirect right\n");
-            // firstly need to open the file
-            int fd = syscall(SYS_open, second_command, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (pid == 0){
+            // in child process
+            int fd = syscall(SYS_open, filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
             if (fd == -1){
                 perror("Error opening file");
                 exit(EXIT_FAILURE);
@@ -116,10 +110,29 @@ int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, char *second_co
                 perror("Error closing file");
                 exit(EXIT_FAILURE);
             }
+            // get rid of the filename from the arguments
+            args_pointers[redirect_right_arg] = '\0';
+            execvp(args_pointers[0], args_pointers);
+            perror("exepvp failed");
+            return EXIT_FAILURE;
+        } else {
+            // in parent process
+            int status;
+            waitpid(pid, &status, 0);
+        }
 
-        } else if (direction == LEFT){
-            // open the file
-            int fd = syscall(SYS_open, second_command, O_RDONLY);
+    } else {
+        // just redirecting left
+        // get the filename
+        char *filename = args_pointers[redirect_left_arg];
+        pid_t pid = fork();
+        if (pid < 0){
+            perror("fork");
+            return EXIT_FAILURE;
+        }
+        if (pid == 0){
+            // in child process
+            int fd = syscall(SYS_open, filename, O_RDONLY);
             if (fd == -1) {
                 perror("open for input redirection");
                 exit(EXIT_FAILURE);
@@ -135,16 +148,16 @@ int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, char *second_co
                 exit(EXIT_FAILURE);
             }
 
+            execvp(args_pointers[0], args_pointers);
+            perror("exepvp failed");
+            return EXIT_FAILURE;
+        } else {
+            // in parent process
+            int status;
+            waitpid(pid, &status, 0);
         }
-
-        execvp(args_pointers[0], args_pointers);
-        perror("exepvp failed");
-        return EXIT_FAILURE;
-    } else {
-        // parent process
-        int status;
-        waitpid(pid, &status, 0);
     }
+
     return 0;
 }
 
@@ -210,10 +223,8 @@ void runCommand(char *buf){
     // make an array pointing to the start of each argument
     //printf("%s", buf);
     char *args_pointers[ARG_LIMIT];
-    int redirect_right_args[ARG_LIMIT];
-    int redirect_left_args[ARG_LIMIT];
-    int redirect_right_count = 0;
-    int redirect_left_count = 0;
+    int redirect_arg_right = 0;
+    int redirect_arg_left = 0;
     // iterate through the array and split the command into args
     int pos = 0;
     int args = 0;
@@ -279,11 +290,11 @@ void runCommand(char *buf){
                 cont = 1;
                 second_command = &buf[pos];
             } else if (redirect_left == 1){
-                redirect_left_args[redirect_left_count] = pos -1;
-                redirect_left_count++;
+                redirect_arg_left = args;
+                prev_start = pos;
             } else if (redirect_right == 1){
-                redirect_right_args[redirect_right_count] = pos -1; 
-                redirect_right_count++;
+                redirect_arg_right = args;
+                prev_start = pos;
             }else {
                 prev_start = pos;
             }
@@ -308,16 +319,16 @@ void runCommand(char *buf){
         args_pointers[ARG_LIMIT] = NULL;
     }
 
+    
+
     // execute commands
     if (sequential_command == 1){
         sequentialCommand(args_pointers, args, second_command);
     } else if (pipe_command == 1){
         pipeCommand(args_pointers, second_command);
-    } else if (redirect_left == 1){
-        redirectionCommand(args_pointers, args, second_command, LEFT, BUF_SIZE - pos);
-    } else if (redirect_right == 1){
-        redirectionCommand(args_pointers, args, second_command, RIGHT, BUF_SIZE - pos);
-    } else {
+    } else if (redirect_left == 1 || redirect_arg_right){
+        redirectionCommand(args_pointers, args, redirect_arg_right, redirect_arg_left);
+    }  else {
         executeCommand(args_pointers, args);
     }
 }
