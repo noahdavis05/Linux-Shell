@@ -49,7 +49,7 @@ int executeCommand(char *args_pointers[ARG_LIMIT], int args){
         // check fork succesful
         if (pid < 0){
             perror("fork");
-            return EXIT_FAILURE;
+            exit(EXIT_FAILURE);
         }
 
         if (pid == 0){
@@ -100,21 +100,21 @@ int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, char *second_co
             int fd = syscall(SYS_open, second_command, O_WRONLY | O_CREAT | O_TRUNC, 0644);
             if (fd == -1){
                 perror("Error opening file");
-                return EXIT_FAILURE;
+                exit(EXIT_FAILURE);
             }
             if (close(STDOUT_FILENO) == -1){
                 perror("error closing stdout");
-                return EXIT_FAILURE;
+                exit(EXIT_FAILURE);
             }
             if (dup2(fd, STDOUT_FILENO) == -1){
                 perror("dup2");
                 close(fd);
-                return EXIT_FAILURE;
+                exit(EXIT_FAILURE);
             }
             // successful so close file and execute command
             if (syscall(SYS_close, fd) == -1){
                 perror("Error closing file");
-                return EXIT_FAILURE;
+                exit(EXIT_FAILURE);
             }
 
         } else if (direction == LEFT){
@@ -122,17 +122,17 @@ int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, char *second_co
             int fd = syscall(SYS_open, second_command, O_RDONLY);
             if (fd == -1) {
                 perror("open for input redirection");
-                return EXIT_FAILURE;
+                exit(EXIT_FAILURE);
             }
             if (dup2(fd, STDIN_FILENO) == -1) {
                 perror("dup2 for input redirection");
                 close(fd);
-                return EXIT_FAILURE;
+                exit(EXIT_FAILURE);
             }
             // successful so close file and execute command
             if (syscall(SYS_close, fd) == -1){
                 perror("Error closing file");
-                return EXIT_FAILURE;
+                exit(EXIT_FAILURE);
             }
 
         }
@@ -186,7 +186,7 @@ int pipeCommand(char *args_pointers[ARG_LIMIT], char *second_command){
         if (dup2(pcp[0], STDIN_FILENO) == -1){
             perror("dup2 pipe 2");
             close(pcp[0]);
-            return EXIT_FAILURE;
+            exit(EXIT_FAILURE);
         }
         close(pcp[0]);
         //printf("Entered fork 2");
@@ -210,7 +210,10 @@ void runCommand(char *buf){
     // make an array pointing to the start of each argument
     //printf("%s", buf);
     char *args_pointers[ARG_LIMIT];
-    
+    int redirect_right_args[ARG_LIMIT];
+    int redirect_left_args[ARG_LIMIT];
+    int redirect_right_count = 0;
+    int redirect_left_count = 0;
     // iterate through the array and split the command into args
     int pos = 0;
     int args = 0;
@@ -223,6 +226,7 @@ void runCommand(char *buf){
     int pipe_command = 0;
     int sequential_command = 0;
     char *second_command;
+    char *redirect_filename;
     // for the loop condition
     int cont = 0; 
     // split the buf up into arguments
@@ -271,10 +275,16 @@ void runCommand(char *buf){
                 buf[pos] = '\0';
                 cont = 1;   
             }
-            if (sequential_command == 1 || pipe_command == 1 || redirect_left == 1 || redirect_right == 1){
+            if (sequential_command == 1 || pipe_command == 1){
                 cont = 1;
                 second_command = &buf[pos];
-            } else {
+            } else if (redirect_left == 1){
+                redirect_left_args[redirect_left_count] = pos -1;
+                redirect_left_count++;
+            } else if (redirect_right == 1){
+                redirect_right_args[redirect_right_count] = pos -1; 
+                redirect_right_count++;
+            }else {
                 prev_start = pos;
             }
             
