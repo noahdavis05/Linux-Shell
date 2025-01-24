@@ -16,6 +16,7 @@
 
 // stub
 void runCommand( char *buf);
+int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, int redirect_right_arg, int redirect_left_arg);
 
 int getCommand(char *buf){
     // print out >>>
@@ -69,20 +70,29 @@ int executeCommand(char *args_pointers[ARG_LIMIT], int args){
     return 0;
 }
 
-int sequentialCommand(char *args_pointers[ARG_LIMIT], int args, char *second_command){
-    executeCommand(args_pointers, args);
+int sequentialCommand(char *args_pointers[ARG_LIMIT], int args, char *second_command, int redirect_arg_right, int redirect_arg_left){
+    if (redirect_arg_left > 0 || redirect_arg_right > 0){
+        //printf("Redirection in sequential\n");
+        redirectionCommand(args_pointers, args, redirect_arg_right, redirect_arg_left);
+    } else{
+        executeCommand(args_pointers, args);
+    }   
     runCommand(second_command);
     return 0;
 }
 
 int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, int redirect_right_arg, int redirect_left_arg){
+    //printf("%d\n", redirect_right_arg);
     // ensure that second_command has no \n
     if (redirect_right_arg > 0 && redirect_left_arg > 0){
         // both redirections
+        
     } else if (redirect_right_arg > 0){
+        //printf("%d\n", redirect_right_arg);
         // just redirecting right
         // get the filename
         char *filename = args_pointers[redirect_right_arg];
+        //printf("%s\n", filename);
         // create a fork
         pid_t pid = fork();
         if (pid < 0){
@@ -264,8 +274,10 @@ void runCommand(char *buf){
                 pipe_command = 1;
             } else if (buf[pos] == '<'){
                 redirect_left = 1;
+                redirect_arg_left = args;
             } else if (buf[pos] == '>'){
                 redirect_right = 1;
+                redirect_arg_right = args;
             }
             // this is the end of an argument
             if ( prev_start != pos){
@@ -289,11 +301,10 @@ void runCommand(char *buf){
             if (sequential_command == 1 || pipe_command == 1){
                 cont = 1;
                 second_command = &buf[pos];
+
             } else if (redirect_left == 1){
-                redirect_arg_left = args;
                 prev_start = pos;
-            } else if (redirect_right == 1){
-                redirect_arg_right = args;
+            } else if (redirect_right == 1){           
                 prev_start = pos;
             }else {
                 prev_start = pos;
@@ -308,7 +319,7 @@ void runCommand(char *buf){
     }
     //printf("%d", args);
     //for (int i = 0; i < args; i++){
-     //   printf("'%s'\n",args_pointers[i]);
+    //   printf("'%s'\n",args_pointers[i]);
     //}
     //printf("second command = '%s'", second_command);
     // null terminate the arguments
@@ -323,8 +334,12 @@ void runCommand(char *buf){
 
     // execute commands
     if (sequential_command == 1){
-        sequentialCommand(args_pointers, args, second_command);
+        // check if redirection happens too
+        sequentialCommand(args_pointers, args, second_command, redirect_arg_right, redirect_arg_left);
     } else if (pipe_command == 1){
+        if (redirect_left == 1 || redirect_right == 1){
+            printf("Pipe command with redirection");
+        }
         pipeCommand(args_pointers, second_command);
     } else if (redirect_left == 1 || redirect_arg_right){
         redirectionCommand(args_pointers, args, redirect_arg_right, redirect_arg_left);
