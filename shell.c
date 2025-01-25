@@ -85,7 +85,48 @@ int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, int redirect_ri
     //printf("%d\n", redirect_right_arg);
     // ensure that second_command has no \n
     if (redirect_right_arg > 0 && redirect_left_arg > 0){
-        // both redirections
+        char *filename_right = args_pointers[redirect_right_arg];
+        char *filename_left = args_pointers[redirect_left_arg];
+        // create a fork
+        pid_t pid = fork();
+        if (pid < 0){
+            perror("fork");
+            return EXIT_FAILURE;
+        }
+        if (pid == 0){
+            // in child process
+            // open the left file and dup
+            int fd_left = open(filename_left, O_RDONLY);
+            if (fd_left < 0){
+                perror("Error opening file");
+                exit(EXIT_FAILURE);
+            }
+            if (dup2(fd_left, STDIN_FILENO) == -1){
+                perror("dup2 left");
+                exit(EXIT_FAILURE);
+            }
+            close(fd_left);
+            // open the right file and dup
+            int fd_right = open(filename_right, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+            if (fd_right < 0){
+                perror("Error opening file");
+                exit(EXIT_FAILURE);
+            }
+            if (dup2(fd_right, STDOUT_FILENO) == -1){
+                perror("dup2 right");
+                exit(EXIT_FAILURE);
+            }
+            close(fd_right);
+            args_pointers[redirect_left_arg] = '\0';
+            args_pointers[redirect_right_arg] = '\0';
+            execvp(args_pointers[0], args_pointers);
+            perror("exepvp failed");
+            return EXIT_FAILURE;
+        } else {
+            // in parent process
+            int status;
+            waitpid(pid, &status, 0);
+        }
         
     } else if (redirect_right_arg > 0){
         //printf("%d\n", redirect_right_arg);
