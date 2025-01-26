@@ -22,5 +22,7 @@ int executeCommand(char *args_pointers[ARG_LIMIT], int args);
 int sequentialCommand(char *args_pointers[ARG_LIMIT], int args, char *second_command, int redirect_arg_right, int redirect_arg_left);
 int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, int redirect_right_arg, int redirect_left_arg);
 int pipeCommand(char *args_pointers[ARG_LIMIT], char *second_command);
+void enableRawMode();
+void disableRawMode();
 
 #endif

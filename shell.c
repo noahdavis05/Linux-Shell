@@ -15,6 +15,8 @@ void getCommand(char *buf){
     char c;
     buf[pos] = '\0';
 
+    enableRawMode();
+
     printPrompt(); 
     fflush(stdout);  
 
@@ -31,7 +33,11 @@ void getCommand(char *buf){
                 buf[pos] = '\0';
                 printf("\b \b");  
             }
-        } else {
+        } else if (c == '\t'){
+            buf[pos++] = '#';
+            buf[pos] = '\0';
+            printf("%c",'P'); 
+        }else {
             buf[pos++] = c;  
             buf[pos] = '\0';  
             printf("%c", c);  
@@ -39,7 +45,9 @@ void getCommand(char *buf){
 
         
     }
-    
+
+    disableRawMode();
+    printf("\n");
 }
 
 void runCommand(char *buf){

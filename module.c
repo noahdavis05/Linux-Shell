@@ -7,6 +7,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/syscall.h>
+#include <termios.h>
 
 void runCommand( char *buf);
 int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, int redirect_right_arg, int redirect_left_arg);
@@ -308,4 +309,21 @@ int pipeCommand(char *args_pointers[ARG_LIMIT], char *second_command){
     int status2;
     waitpid(pid2, &status2, 0);
     return 0;
+}
+
+
+void enableRawMode() {
+    struct termios raw;
+
+    tcgetattr(STDIN_FILENO, &raw);          // Get current terminal attributes
+    raw.c_lflag &= ~(ICANON | ECHO);        // Disable canonical mode and echo
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); // Apply the new attributes
+}
+
+void disableRawMode() {
+    struct termios raw;
+
+    tcgetattr(STDIN_FILENO, &raw);          // Get current terminal attributes
+    raw.c_lflag |= (ICANON | ECHO);         // Enable canonical mode and echo
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); // Apply the new attributes
 }
