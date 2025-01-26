@@ -12,6 +12,25 @@ void runCommand( char *buf);
 int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, int redirect_right_arg, int redirect_left_arg);
 
 
+void clearTerminal(){
+    pid_t pid = fork();
+    if (pid < 0){
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+    if (pid == 0){
+        // in child process
+        char *args[] = {"clear", NULL};
+        execvp("clear", args);
+        perror("Execvp");
+        exit(EXIT_FAILURE);
+    } else {
+        // parent process
+        int status;
+        waitpid(pid, &status, 0);
+    }
+}
+
 void printWelcome(){
     printf(
 "  ##  ##                      ##        ##            \n"

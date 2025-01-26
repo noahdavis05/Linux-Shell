@@ -9,15 +9,41 @@
 
 #include "module.h"
 
-int getCommand(char *buf){
-    printPrompt();
-    fgets(buf, BUF_SIZE, stdin);
-    return 0;
+
+void getCommand(char *buf){
+    int pos = 0;  
+    char c;
+    buf[pos] = '\0';
+
+    printPrompt(); 
+    fflush(stdout);  
+
+    while (1) {
+        c = getchar();  
+
+        if (c == '\n') {  
+            buf[pos] = '\n';  
+            buf[pos + 1] = '\0';
+            break;
+        } else if (c == 127) {  
+            if (pos > 0) {
+                pos--;
+                buf[pos] = '\0';
+                printf("\b \b");  
+            }
+        } else {
+            buf[pos++] = c;  
+            buf[pos] = '\0';  
+            printf("%c", c);  
+        }
+
+        
+    }
+    
 }
 
 void runCommand(char *buf){
     // make an array pointing to the start of each argument
-    //printf("%s", buf);
     char *args_pointers[ARG_LIMIT];
     int redirect_arg_right = 0;
     int redirect_arg_left = 0;
@@ -114,7 +140,7 @@ void runCommand(char *buf){
         sequentialCommand(args_pointers, args, second_command, redirect_arg_right, redirect_arg_left);
     } else if (pipe_command == 1){
         if (redirect_left == 1 || redirect_right == 1){
-            printf("Pipe command with redirection");
+            //printf("Pipe command with redirection");
         }
         pipeCommand(args_pointers, second_command);
     } else if (redirect_left == 1 || redirect_arg_right){
@@ -122,16 +148,24 @@ void runCommand(char *buf){
     }  else {
         executeCommand(args_pointers, args);
     }
+    // this removes extra command which is printed for an unknown reasonS
+    fflush(stdout);
+    printf("\033[2K\r");
+    fflush(stdout);
 }
 
 
 int main(){
+    clearTerminal();
     printWelcome();
     // firstly make the buf for commands
     char buf[BUF_SIZE];
     while (0 == 0){
         getCommand(buf);
+        //printf("¬%s¬", buf);
         runCommand(buf);
+        memset(buf, 0, sizeof(buf));
+
     }
     return 0;
 }

@@ -5,7 +5,17 @@
 #define ARG_LIMIT 15
 #define LEFT 0
 #define RIGHT 1
+
+// my Struct
+struct commandTags {
+    int pipeCommand;
+    int sequentialCommand;
+    int redirection_left;
+    int redirection_right;
+};
+
 // function prototypes
+void clearTerminal();
 void printWelcome();
 void printPrompt();
 int executeCommand(char *args_pointers[ARG_LIMIT], int args);
