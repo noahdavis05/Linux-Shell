@@ -7,6 +7,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/syscall.h>
+#include <dirent.h>
 #include <termios.h>
 
 void runCommand( char *buf);
@@ -327,3 +328,64 @@ void disableRawMode() {
     raw.c_lflag |= (ICANON | ECHO);         // Enable canonical mode and echo
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); // Apply the new attributes
 }
+
+void makePrediction(char *predict_string){
+
+}
+
+
+
+void getUserInput(char *buf, int pos){
+    while (1) {
+        char c = getchar();  
+
+        if (c == '\n') {  
+            buf[pos] = '\n';  
+            buf[pos + 1] = '\0';
+            break;
+        } else if (c == 127) {  
+            if (pos > 0) {
+                pos--;
+                buf[pos] = '\0';
+                printf("\b \b");  
+            }
+        } else if (c == '\t'){
+            buf[pos++] = '#';
+            buf[pos] = '\0';
+            printf("%c",'P'); 
+        }else {
+            buf[pos++] = c;  
+            buf[pos] = '\0';  
+            printf("%c", c);  
+        }
+
+        // here I can call a function to complete predictions
+    }
+}
+
+void execute(struct commandTags command, char *args_pointers[ARG_LIMIT], int args){
+    if (args < ARG_LIMIT){
+        args_pointers[args] = NULL;
+    } else{
+        args_pointers[ARG_LIMIT] = NULL;
+    }
+
+    
+    // execute commands
+    if (command.sequential_command == 1){
+        // check if redirection happens too
+        sequentialCommand(args_pointers, args, command.second_command, command.redirect_arg_right, command.redirect_arg_left);
+    } else if (command.pipe_command == 1){
+        if (command.redirection_left == 1 || command.redirection_right == 1){}
+        pipeCommand(args_pointers, command.second_command);
+    } else if (command.redirection_left == 1 || command.redirect_arg_right){
+        redirectionCommand(args_pointers, args, command.redirect_arg_right, command.redirect_arg_left);
+    }  else {
+        executeCommand(args_pointers, args);
+    }
+    // this removes extra command which is printed for an unknown reasonS
+    fflush(stdout);
+    printf("\033[2K\r");
+    fflush(stdout);
+}
+

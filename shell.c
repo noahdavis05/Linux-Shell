@@ -12,64 +12,37 @@
 
 void getCommand(char *buf){
     int pos = 0;  
-    char c;
     buf[pos] = '\0';
 
-    enableRawMode();
-
+    enableRawMode(); // needed to disable common input handling e.g tab automatically tabbing
     printPrompt(); 
     fflush(stdout);  
-
-    while (1) {
-        c = getchar();  
-
-        if (c == '\n') {  
-            buf[pos] = '\n';  
-            buf[pos + 1] = '\0';
-            break;
-        } else if (c == 127) {  
-            if (pos > 0) {
-                pos--;
-                buf[pos] = '\0';
-                printf("\b \b");  
-            }
-        } else if (c == '\t'){
-            buf[pos++] = '#';
-            buf[pos] = '\0';
-            printf("%c",'P'); 
-        }else {
-            buf[pos++] = c;  
-            buf[pos] = '\0';  
-            printf("%c", c);  
-        }
-
-        
-    }
-
+    getUserInput(buf, pos);
     disableRawMode();
     printf("\n");
 }
 
 void runCommand(char *buf){
     // make an array pointing to the start of each argument
-    char *args_pointers[ARG_LIMIT];
-    int redirect_arg_right = 0;
-    int redirect_arg_left = 0;
-    // iterate through the array and split the command into args
-    int pos = 0;
+    char *args_pointers[ARG_LIMIT];    
     int args = 0;
+    
+    // variables to detect redirection, pipes, and semi-colons
+    struct commandTags command;
+    command.pipe_command = 0;
+    command.redirection_left = 0;
+    command.redirection_right = 0;
+    command.sequential_command = 0;
+    command.redirect_arg_left = 0;
+    command.redirect_arg_right = 0;
+    
+
+    // for the loop condition
+    int cont = 0; 
+    int pos = 0;
     int prev_start = 0;
     // to allow speech marks
     int speech_open = 0;
-    // variables to detect redirection, pipes, and semi-colons
-    int redirect_left = 0;
-    int redirect_right = 0;
-    int pipe_command = 0;
-    int sequential_command = 0;
-    char *second_command;
-    char *redirect_filename;
-    // for the loop condition
-    int cont = 0; 
     // split the buf up into arguments
     while (cont == 0 && pos < BUF_SIZE){
         if (buf[pos] == '\n'){
@@ -89,15 +62,15 @@ void runCommand(char *buf){
         if ((buf[pos] == ' ' || buf[pos] == ';' || buf[pos] == '|' || buf[pos] == '>' || buf[pos] == '<') && speech_open == 0){
             // check what the input was
             if (buf[pos] == ';'){
-                sequential_command = 1;
+                command.sequential_command = 1;
             } else if (buf[pos] == '|'){
-                pipe_command = 1;
+                command.pipe_command = 1;
             } else if (buf[pos] == '<'){
-                redirect_left = 1;
-                redirect_arg_left = args;
+                command.redirection_left = 1;
+                command.redirect_arg_left = args;
             } else if (buf[pos] == '>'){
-                redirect_right = 1;
-                redirect_arg_right = args;
+                command.redirection_right = 1;
+                command.redirect_arg_right = args;
             }
             // this is the end of an argument
             if ( prev_start != pos){
@@ -118,13 +91,13 @@ void runCommand(char *buf){
                 buf[pos] = '\0';
                 cont = 1;   
             }
-            if (sequential_command == 1 || pipe_command == 1){
+            if (command.sequential_command == 1 || command.pipe_command == 1){
                 cont = 1;
-                second_command = &buf[pos];
+                command.second_command = &buf[pos];
 
-            } else if (redirect_left == 1){
+            } else if (command.redirection_left == 1){
                 prev_start = pos;
-            } else if (redirect_right == 1){           
+            } else if (command.redirection_right == 1){           
                 prev_start = pos;
             }else {
                 prev_start = pos;
@@ -135,31 +108,7 @@ void runCommand(char *buf){
         
     }
 
-    if (args < ARG_LIMIT){
-        args_pointers[args] = NULL;
-    } else{
-        args_pointers[ARG_LIMIT] = NULL;
-    }
-
-    
-    // execute commands
-    if (sequential_command == 1){
-        // check if redirection happens too
-        sequentialCommand(args_pointers, args, second_command, redirect_arg_right, redirect_arg_left);
-    } else if (pipe_command == 1){
-        if (redirect_left == 1 || redirect_right == 1){
-            //printf("Pipe command with redirection");
-        }
-        pipeCommand(args_pointers, second_command);
-    } else if (redirect_left == 1 || redirect_arg_right){
-        redirectionCommand(args_pointers, args, redirect_arg_right, redirect_arg_left);
-    }  else {
-        executeCommand(args_pointers, args);
-    }
-    // this removes extra command which is printed for an unknown reasonS
-    fflush(stdout);
-    printf("\033[2K\r");
-    fflush(stdout);
+    execute(command, args_pointers, args);
 }
 
 
@@ -170,7 +119,6 @@ int main(){
     char buf[BUF_SIZE];
     while (0 == 0){
         getCommand(buf);
-        //printf("¬%s¬", buf);
         runCommand(buf);
         memset(buf, 0, sizeof(buf));
 

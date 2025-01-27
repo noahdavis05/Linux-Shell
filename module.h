@@ -8,10 +8,14 @@
 
 // my Struct
 struct commandTags {
-    int pipeCommand;
-    int sequentialCommand;
+    int pipe_command;
+    int sequential_command;
     int redirection_left;
     int redirection_right;
+    char *second_command;
+    char *filename;
+    int redirect_arg_right;
+    int redirect_arg_left;
 };
 
 // function prototypes
@@ -24,5 +28,8 @@ int redirectionCommand(char *args_pointers[ARG_LIMIT], int args, int redirect_ri
 int pipeCommand(char *args_pointers[ARG_LIMIT], char *second_command);
 void enableRawMode();
 void disableRawMode();
+void getUserInput(char *buf, int pos);
+void execute(struct commandTags command, char *args_pointers[ARG_LIMIT], int args);
+
 
 #endif
