@@ -20,6 +20,7 @@ void getCommand(char *buf){
     getUserInput(buf, pos);
     disableRawMode();
     printf("\n");
+    //printf("%s",buf);
 }
 
 void runCommand(char *buf){

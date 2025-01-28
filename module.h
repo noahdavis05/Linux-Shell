@@ -5,6 +5,7 @@
 #define ARG_LIMIT 15
 #define LEFT 0
 #define RIGHT 1
+#define MAX_ENTRIES 1024
 
 // my Struct
 struct commandTags {

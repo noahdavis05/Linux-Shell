@@ -316,50 +316,188 @@ int pipeCommand(char *args_pointers[ARG_LIMIT], char *second_command){
 void enableRawMode() {
     struct termios raw;
 
-    tcgetattr(STDIN_FILENO, &raw);          // Get current terminal attributes
-    raw.c_lflag &= ~(ICANON | ECHO);        // Disable canonical mode and echo
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); // Apply the new attributes
+    tcgetattr(STDIN_FILENO, &raw);         
+    raw.c_lflag &= ~(ICANON | ECHO);       
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); 
 }
 
 void disableRawMode() {
     struct termios raw;
 
-    tcgetattr(STDIN_FILENO, &raw);          // Get current terminal attributes
-    raw.c_lflag |= (ICANON | ECHO);         // Enable canonical mode and echo
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw); // Apply the new attributes
-}
-
-void makePrediction(char *predict_string){
-
+    tcgetattr(STDIN_FILENO, &raw);      
+    raw.c_lflag |= (ICANON | ECHO);      
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
 
 
-void getUserInput(char *buf, int pos){
-    while (1) {
-        char c = getchar();  
+void predictWord(char *word) {
+    // Get all the files and directories in the current directory
+    char bestMatch[BUF_SIZE] = "";
+    DIR *folder;
+    struct dirent *entry;
+    int min_length = BUF_SIZE;
 
-        if (c == '\n') {  
-            buf[pos] = '\n';  
-            buf[pos + 1] = '\0';
-            break;
-        } else if (c == 127) {  
-            if (pos > 0) {
-                pos--;
-                buf[pos] = '\0';
-                printf("\b \b");  
+    folder = opendir(".");
+    if (folder == NULL) {
+        perror("Unable to open directory");
+        exit(EXIT_FAILURE);
+    }
+
+    // Find the best match for the given word
+    while ((entry = readdir(folder))) {
+        if (strncmp(entry->d_name, word, strlen(word)) == 0) {
+            if (strlen(entry->d_name) < min_length){
+                strncpy(bestMatch, entry->d_name, BUF_SIZE - 1);
+                bestMatch[BUF_SIZE - 1] = '\0'; 
+                min_length = strlen(entry->d_name);
             }
-        } else if (c == '\t'){
-            buf[pos++] = '#';
+
+            
+        }
+    }
+
+    closedir(folder);
+
+    // Print the best match in light gray
+    if (min_length < BUF_SIZE) {
+        printf("\033[s");              
+        printf("\033[K");              
+        printf("\033[90m%s\033[0m", &bestMatch[strlen(word)]); 
+        printf("\033[u");              
+        fflush(stdout);
+    } else {
+        printf("\033[s");              
+        printf("\033[K");
+    }
+}
+
+void makePrediction(char *buf) {
+    // Extract the current word being typed
+    char *word = &buf[0];
+    int i = 0;
+    int prev_start = 0;
+
+    while (buf[i] != '\0') {
+        
+        if (buf[i] == ' ' || buf[i] == '>' || buf[i] == '<' || buf[i] == ';' || buf[i] == '|') {
+            prev_start = i + 1;
+        } else if(buf[i] == '/' && buf[i-1] == '.'){
+            prev_start = i + 1;
+        }
+        i++;
+    }
+
+    word = &buf[prev_start];
+    predictWord(word); // Make a prediction based on the extracted word
+}
+
+int chooseAndWriteWord(char *buf, int pos, char *word){
+    // Get all the files and directories in the current directory
+    char bestMatch[BUF_SIZE] = "";
+    DIR *folder;
+    struct dirent *entry;
+    int min_length = BUF_SIZE;
+
+    folder = opendir(".");
+    if (folder == NULL) {
+        perror("Unable to open directory");
+        exit(EXIT_FAILURE);
+    }
+
+    // Find the best match for the given word
+    while ((entry = readdir(folder))) {
+        if (strcmp(entry->d_name, ".") == 0){continue;}
+        if (strncmp(entry->d_name, word, strlen(word)) == 0) {
+            if (strlen(entry->d_name) < min_length){
+                strncpy(bestMatch, entry->d_name, BUF_SIZE - 1);
+                bestMatch[strlen(entry->d_name)] = '\0'; 
+                min_length = strlen(entry->d_name);
+            }
+
+            
+        }
+    }
+
+    closedir(folder);
+    // now write word to buf and command line in white
+    pos -= strlen(word);
+    // from here we can write the predicted word to command line and buf
+    int i;
+    for (i = 0; i < strlen(bestMatch); i++){
+        buf[pos + i] = bestMatch[i];
+        //printf("%d\n", i);
+    }
+    pos += i;
+    pos;
+    //buf[pos] = '\0';
+    // write to command line
+    printf("\033[2K\r");//clear
+    printPrompt();
+    printf("%s", buf);
+    fflush(stdout);
+    return pos;
+}
+
+int autoFill(char *buf, int pos){
+    // Extract the current word being typed
+    char *word = &buf[0];
+    int i = 0;
+    int prev_start = 0;
+
+    while (buf[i] != '\0') {
+        
+        if (buf[i] == ' ' || buf[i] == '>' || buf[i] == '<' || buf[i] == ';' || buf[i] == '|') {
+            prev_start = i + 1;
+        } else if(buf[i] == '/' && buf[i-1] == '.'){
+            prev_start = i + 1;
+        }
+        i++;
+    }
+
+    word = &buf[prev_start];
+    // now need to make the prediction
+    return chooseAndWriteWord(buf, pos, word);
+}
+
+void getUserInput(char *buf, int pos) {
+    while (1) {
+        char c = getchar();
+
+        if (c == '\n') { // Handle Enter key
+            //printf("1%s1\n", buf);
+            buf[pos] = '\n';
+            buf[pos + 1] = '\0';
+            //printf("2%s2\n", buf);
+            break;
+        } else if (c == 127) { // Handle Backspace
+            if (pos > 0) {
+                pos--;                
+                buf[pos] = '\0';      
+
+                // Clear the current line
+                printf("\033[2K\r");  
+
+                // Rewrite the prompt and the updated buffer
+                printPrompt();
+                printf("%s", buf);
+                fflush(stdout);       
+            }
+        } else if (c == '\t') { // Handle Tab key
+            pos = autoFill(buf, pos);        
+            //buf[pos] = '\0';
+            //printf("&%s&", buf);
+        } else { // Handle Normal Input
+            buf[pos++] = c;
             buf[pos] = '\0';
-            printf("%c",'P'); 
-        }else {
-            buf[pos++] = c;  
-            buf[pos] = '\0';  
-            printf("%c", c);  
+            printf("%c", c);          
         }
 
-        // here I can call a function to complete predictions
+        // Call the function to make predictions based on the current buffer
+        if (pos > 0 && c != '\t'){
+            makePrediction(buf);
+        }
+        
     }
 }
 
