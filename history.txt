@@ -3,3 +3,6 @@ cd temp
 ls
 cd ..
 git add .
+git commit -m "Updated README.md"
+git push
+git add .
