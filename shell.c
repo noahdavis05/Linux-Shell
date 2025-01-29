@@ -114,6 +114,7 @@ void runCommand(char *buf){
 
 
 int main(){
+    resetHistory();
     clearTerminal();
     printWelcome();
     // firstly make the buf for commands

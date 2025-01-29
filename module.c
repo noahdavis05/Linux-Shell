@@ -54,6 +54,11 @@ void printWelcome(){
     );
 }
 
+void resetHistory(){
+    FILE *file = fopen(HISTORY_FILE, "w");
+    fclose(file);
+}
+
 void printPrompt(){
     // print out directory then >>>
     char dir_buffer[1000];
@@ -528,6 +533,7 @@ void getUserInput(char *buf, int pos) {
             buf[pos + 1] = '\0';
             //printf("2%s2\n", buf);
             writeHistory(buf);
+            currentHistory++;
             break;
         } else if (c == 127) { // Handle Backspace
             if (pos > 0) {

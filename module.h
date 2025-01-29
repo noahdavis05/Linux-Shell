@@ -32,6 +32,7 @@ void enableRawMode();
 void disableRawMode();
 void getUserInput(char *buf, int pos);
 void execute(struct commandTags command, char *args_pointers[ARG_LIMIT], int args);
+void resetHistory();
 
 
 #endif
