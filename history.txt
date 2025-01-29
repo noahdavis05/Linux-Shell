@@ -1,17 +1,10 @@
-cat < history.txt
+echo file
 ls
-echo HI > file1.txt; cat < file1.txt | grep H > doc; cat doc
-cd img
+cd temp
 ls
-ls ./img
-mkdir dir
-cd dir
-cd dir
+cd ..
 ls
-rm dir
-rm - rf dir
-rm -rf dir
+cd ..
+cd Linux-Shell
 ls
-ls ./img
-rm doc file.txt file1.txt 
 git add .

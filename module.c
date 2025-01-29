@@ -80,6 +80,7 @@ int executeCommand(char *args_pointers[ARG_LIMIT], int args){
     // check if the command is a cd 
     if (strcmp(args_pointers[0], "cd") == 0){
         if (args > 1){
+            //printf("!%s!\n",args_pointers[1]);
             chdir(args_pointers[1]);
         } else {
             perror("No directory specified");
@@ -618,9 +619,6 @@ void execute(struct commandTags command, char *args_pointers[ARG_LIMIT], int arg
     }  else {
         executeCommand(args_pointers, args);
     }
-    // this removes extra command which is printed for an unknown reasonS
-    fflush(stdout);
-    printf("\033[2K\r");
-    fflush(stdout);
+
 }
 
