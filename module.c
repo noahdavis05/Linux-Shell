@@ -460,7 +460,65 @@ int autoFill(char *buf, int pos){
     return chooseAndWriteWord(buf, pos, word);
 }
 
+
+void writeHistory(char *buf){
+    // check file hasn't got more than 500 entries
+    FILE *file = fopen(HISTORY_FILE, "a");
+    fprintf(file,"%s", buf);
+    fclose(file);
+}
+
+int linesInHistory(){
+    FILE *file = fopen(HISTORY_FILE, "r");
+    int lines = 0;
+    char c;
+    for (c = getc(file); c!=EOF; c = getc(file)){
+        if (c == '\n'){
+            lines++;
+        }
+    }
+    fclose(file);
+    return lines;
+}
+
+char *getHistoryCommand(int line){
+    char *command = malloc(BUF_SIZE);
+    char buffer[BUF_SIZE];
+    FILE *file = fopen(HISTORY_FILE, "r");
+    int lines = 0;
+
+    while (fgets(buffer, BUF_SIZE, file)){
+        if (lines == line){
+            fclose(file);
+            snprintf(command, BUF_SIZE, "%s", buffer);
+            // iterate through command and change \n to \0
+            int pos = 0;
+            while (command[pos] != '\n' && pos < BUF_SIZE){
+                pos++;
+            }
+            command[pos] = '\0';
+            return command;
+        }
+        lines++;
+    }
+
+    fclose(file);
+    free(command);
+    return NULL;
+}
+
+int getBufLen(char *buf){
+    int pos = 0;
+    while (buf[pos] != '\0' && pos < BUF_SIZE){
+        pos++;
+    }
+    return pos;
+}
+
+
 void getUserInput(char *buf, int pos) {
+    int currentHistory = linesInHistory() - 1;
+    int maxHistory = currentHistory;
     while (1) {
         char c = getchar();
 
@@ -469,6 +527,7 @@ void getUserInput(char *buf, int pos) {
             buf[pos] = '\n';
             buf[pos + 1] = '\0';
             //printf("2%s2\n", buf);
+            writeHistory(buf);
             break;
         } else if (c == 127) { // Handle Backspace
             if (pos > 0) {
@@ -487,7 +546,39 @@ void getUserInput(char *buf, int pos) {
             pos = autoFill(buf, pos);        
             //buf[pos] = '\0';
             //printf("&%s&", buf);
-        } else { // Handle Normal Input
+        } else if (c == '\033'){
+            getchar();
+            char arrow = getchar();
+            if (arrow == 'A'){
+                // up arrow
+                //printf("Up");
+                currentHistory--;
+                if (currentHistory < 0){
+                    currentHistory = 0;
+                }
+                
+            } else if (arrow == 'B'){
+                // down arrow
+                //printf("Down");
+                currentHistory++;
+                if (currentHistory > maxHistory){
+                    currentHistory = maxHistory;
+                }
+            }
+            // get the command from history
+            char *command = getHistoryCommand(currentHistory);
+            //printf("%s\n", command);
+            snprintf(buf, BUF_SIZE, "%s",command);
+            free(command);
+            // now clear line print command 
+            printf("\033[2K\r");  
+            //printf("%d",currentHistory);
+            // Rewrite the prompt and the updated buffer
+            printPrompt();
+            printf("%s", buf);
+            pos = getBufLen(buf);
+            //fflush(stdout);   
+        }else { // Handle Normal Input
             buf[pos++] = c;
             buf[pos] = '\0';
             printf("%c", c);          

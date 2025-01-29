@@ -6,6 +6,7 @@
 #define LEFT 0
 #define RIGHT 1
 #define MAX_ENTRIES 1024
+#define HISTORY_FILE "history.txt"
 
 // my Struct
 struct commandTags {
