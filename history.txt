@@ -1,2 +1,17 @@
-echo hi
+cat < history.txt
+ls
+echo HI > file1.txt; cat < file1.txt | grep H > doc; cat doc
+cd img
+ls
+ls ./img
+mkdir dir
+cd dir
+cd dir
+ls
+rm dir
+rm - rf dir
+rm -rf dir
+ls
+ls ./img
+rm doc file.txt file1.txt 
 git add .
