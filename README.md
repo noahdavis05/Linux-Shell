@@ -10,5 +10,5 @@ To run
 ./shell
 ```
 ## Example
-![Example 1](pic1.png)
-![Example 2](pic2.png)
+![Example 1](img/pic1.png)
+![Example 2](img/pic2.png)
