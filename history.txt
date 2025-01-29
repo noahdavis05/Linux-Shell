@@ -1,14 +1,5 @@
-echo file
 ls
 cd temp
 ls
 cd ..
-ls
-cd ..
-cd Linux-Shell
-ls
 git add .
-git commit -m "Fixed small bug to do with History.txt when changing directory"
-git push
-git pull
-git pull origin main
