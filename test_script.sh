@@ -13,7 +13,6 @@ echo "echo Hello, World!" > tmp
 if grep -q "echo Hello, World!" tmp;
 then
     echo "PASS"
-    exit 1
 else
     echo "FAIL"
     exit 1
