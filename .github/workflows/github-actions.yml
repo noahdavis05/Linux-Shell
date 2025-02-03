@@ -27,7 +27,11 @@ jobs:
         run: |
           chmod +x test_script.sh
           ./test_script.sh
+          exit_status=$?  # Capture the exit status
+          if [ $exit_status -eq 0 ]; then
+            echo "✅ Test script executed successfully!"
+          else
+            echo "❌ Test script failed with exit status $exit_status"
+            exit $exit_status  # Fail the workflow
+          fi
         shell: bash
-
-      - name: Check Exit Status
-        run: echo "✅ Test script executed successfully!"
