@@ -13,3 +13,6 @@ To run
 ## Example
 ![Example 1](img/pic1.png)
 ![Example 2](img/pic2.png)
+
+## Automated Testing
+This also includes a very basic github actions, automated testing pipeline, which I have implemented just to learn the basics of github actions!
