@@ -121,7 +121,7 @@ int main(){
     char buf[BUF_SIZE];
     while (0 == 0){
         getCommand(buf);
-        runCommand(buf);
+        //runCommand(buf);
         memset(buf, 0, sizeof(buf));
 
     }
