@@ -535,7 +535,7 @@ void getUserInput(char *buf, int pos) {
             //printf("2%s2\n", buf);
             writeHistory(buf);
             currentHistory++;
-            break;
+            return;
         } else if (c == 127) { // Handle Backspace
             if (pos > 0) {
                 pos--;                
